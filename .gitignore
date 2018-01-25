@@ -1,0 +1,8 @@
+obj/
+bin/
+packages/
+.vs/
+PongExample/
+SimultaneousLiteNetLib/
+Simultaneous2Core/
+SimultaneousEngine/
