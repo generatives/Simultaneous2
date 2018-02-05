@@ -13,13 +13,18 @@ namespace SimultaneousNetwork.SubSpace
 {
     public class LocalSubSpace : ISubSpace
     {
-        public Guid Id { get; private set; }
+        public Guid MemberId => _member.Id;
 
+        public IEnumerable<INetObj> NetObjs => _objects.Values;
+
+        public INetObj this[Guid id] => _objects[id];
+
+        private NetworkMember _member;
         private Dictionary<Guid, NetObj> _objects;
 
-        public LocalSubSpace(Guid id)
+        public LocalSubSpace(NetworkMember member)
         {
-            Id = id;
+            _member = member;
             _objects = new Dictionary<Guid, NetObj>();
         }
 
@@ -28,14 +33,22 @@ namespace SimultaneousNetwork.SubSpace
 
         }
 
-        public INetObj GetObj(Guid id)
-        {
-            return _objects[id];
-        }
-
         public void AddNetObj(NetObj obj)
         {
+            _objects[obj.Id] = obj;
+        }
 
+        public bool RemoveNetObj(Guid id)
+        {
+            if(_objects.ContainsKey(id))
+            {
+                _objects.Remove(id);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 }

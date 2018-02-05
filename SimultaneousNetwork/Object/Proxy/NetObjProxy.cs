@@ -1,5 +1,4 @@
-﻿using Castle.DynamicProxy;
-using SimultaneousNetwork.SubSpace;
+﻿using SimultaneousNetwork.SubSpace;
 using SimultaneousNetwork.SubSpace.Messages;
 using System;
 using System.Collections.Generic;
@@ -9,34 +8,36 @@ using System.Text;
 
 namespace SimultaneousNetwork.Object.Proxy
 {
-    public class NetObjProxy : INetObj, IInterceptor
+    public class NetObjProxy : INetObj
     {
         public Guid Id { get; private set; }
 
         public ISubSpace Member { get; private set; }
 
-        private Dictionary<MethodInfo, int> _funcs;
+        private Dictionary<string, object> _traits;
 
-        public NetObjProxy(NetObjDescription desc)
+        public NetObjProxy(NetObjDescription desc, ISubSpace space)
         {
             Id = desc.Id;
-            Member = desc.SubSpace;
-            _funcs = ObjectProxyFactory.GetMethods(desc.Type)
-                .ToArray()
-                .Select((m, i) => new { m, i })
-                .ToDictionary(tup => tup.m, tup => tup.i);
+            Member = space;
+            _traits = desc.Traits;
         }
 
-        public void Tell(object message)
+        public void Tell(INetObj sender, object message)
         {
-            Member.Tell(new ObjectMessage() { Object = this, Message = message });
+            Member.Tell(new ObjectMessage() { Object = this, Sender = sender, Message = message });
         }
 
-        public void Intercept(IInvocation invocation)
+        public object GetTrait(string name)
         {
-            var index = _funcs[invocation.Method];
-            var para = invocation.Arguments;
-            Tell(new FunctionCall() { FuncIndex = index, Params = para });
+            if (_traits.ContainsKey(name))
+            {
+                return _traits[name];
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using SimultaneousNetwork.Object;
+using SimultaneousNetwork.Object.Proxy;
 using SimultaneousNetwork.SubSpace;
 using System;
 using System.Collections.Generic;
@@ -44,12 +45,39 @@ namespace SimultaneousNetwork.SubSpace.Messages
     public sealed class ObjectMessage
     {
         public INetObj Object;
+        public INetObj Sender;
         public object Message;
     }
 
-    public sealed class FunctionCall
+    public sealed class ObjectAdded
     {
-        public int FuncIndex;
-        public object[] Params;
+        public NetObjDescription Description;
+    }
+
+    public sealed class ObjectRemoved
+    {
+        public INetObj Obj;
+    }
+
+    public sealed class NetMemberSurrogate
+    {
+        public Guid Id;
+
+        public NetMemberSurrogate(Guid id)
+        {
+            Id = id;
+        }
+    }
+
+    public sealed class NetObjSurrogate
+    {
+        public Guid Id;
+        public ISubSpace Member;
+
+        public NetObjSurrogate(Guid id, ISubSpace member)
+        {
+            Id = id;
+            Member = member;
+        }
     }
 }

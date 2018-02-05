@@ -15,23 +15,35 @@ namespace SimultaneousNetwork
         public Guid Id { get; private set; }
         public ISubSpace Member { get; private set; }
 
-        private MethodInfo[] _funcs;
+        private Dictionary<string, object> _traits;
+        internal Dictionary<string, object> Traits => _traits;
 
         public NetObj(Guid id, ISubSpace member)
         {
             Id = id;
             Member = member;
-            _funcs = ObjectProxyFactory.GetMethods(GetType()).ToArray();
+            _traits = new Dictionary<string, object>();
+            DeclareTraits(_traits);
         }
 
-        public void Tell(object message)
+        public void Tell(INetObj sender, object message)
         {
-            switch(message)
+            RecieveMessage(sender, message);
+        }
+
+        public object GetTrait(string name)
+        {
+            if (_traits.ContainsKey(name))
             {
-                case FunctionCall funcCall:
-                    _funcs[funcCall.FuncIndex].Invoke(this, funcCall.Params);
-                    break;
+                return _traits[name];
+            }
+            else
+            {
+                return null;
             }
         }
+
+        public abstract void DeclareTraits(Dictionary<string, object> traits);
+        protected abstract void RecieveMessage(INetObj sender, object message);
     }
 }

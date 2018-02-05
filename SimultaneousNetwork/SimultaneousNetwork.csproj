@@ -5,7 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Castle.Core" Version="4.2.1" />
+    <None Remove="SubSpace\Messages.cs~RF570d165c.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Hyperion" Version="0.9.6" />
     <PackageReference Include="LiteNetLib" Version="0.7.7.1" />
   </ItemGroup>

@@ -10,6 +10,8 @@ namespace SimultaneousNetwork.Object
         Guid Id { get; }
         ISubSpace Member { get; }
 
-        void Tell(object message);
+        object GetTrait(string name);
+
+        void Tell(INetObj sender, object message);
     }
 }

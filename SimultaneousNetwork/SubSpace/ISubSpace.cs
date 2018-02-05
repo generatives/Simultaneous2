@@ -7,8 +7,9 @@ namespace SimultaneousNetwork.SubSpace
 {
     public interface ISubSpace
     {
-        Guid Id { get; }
+        Guid MemberId { get; }
         void Tell(object obj);
-        INetObj GetObj(Guid id);
+        INetObj this[Guid id] { get; }
+        IEnumerable<INetObj> NetObjs { get; }
     }
 }

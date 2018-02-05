@@ -8,7 +8,7 @@ namespace SimultaneousNetwork.Object.Proxy
     public class NetObjDescription
     {
         public Guid Id;
-        public ISubSpace SubSpace;
-        public Type Type;
+        public Guid MemberId;
+        public Dictionary<string, object> Traits;
     }
 }

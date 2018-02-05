@@ -12,45 +12,44 @@ namespace SimultaneousNetwork.SubSpace
 {
     public class RemoteSubSpace : ISubSpace
     {
-        public Guid Id { get; private set; }
-
-        private List<object> _messages;
-        private NetPeer _peer;
-        private Serializer _serializer;
-
+        private RemoteMember _member;
         public Dictionary<Guid, NetObjProxy> _proxies;
 
-        public RemoteSubSpace(Guid id, NetPeer peer, Serializer serializer)
+        public Guid MemberId => _member.Id;
+
+        public IEnumerable<INetObj> NetObjs => _proxies.Values;
+
+        public INetObj this[Guid id] => _proxies[id];
+
+        public RemoteSubSpace(RemoteMember member)
         {
-            Id = id;
-            _peer = peer;
-            _serializer = serializer;
-            _messages = new List<object>();
+            _proxies = new Dictionary<Guid, NetObjProxy>();
+            _member = member;
         }
 
         public void Tell(object obj)
         {
-            _messages.Add(obj);
-        }
-        
-        public void Update()
-        {
-            _peer.Send(_messages.ToArray(), _serializer);
+            _member.Tell(obj);
         }
 
-        public INetObj GetObj(Guid id)
+        public INetObj AddObj(NetObjDescription desc)
         {
-            return _proxies[id];
+            var obj = new NetObjProxy(desc, this);
+            _proxies[desc.Id] = obj;
+            return obj;
         }
 
-        public NetMemberRef GetRef()
+        public bool RemoveObj(INetObj obj)
         {
-            return new NetMemberRef()
+            if(_proxies.ContainsKey(obj.Id))
             {
-                Id = Id,
-                Address = _peer.EndPoint.Host,
-                Port = _peer.EndPoint.Port
-            };
+                _proxies.Remove(obj.Id);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 }
