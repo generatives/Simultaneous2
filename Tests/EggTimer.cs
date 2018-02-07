@@ -9,6 +9,11 @@ namespace Tests
 {
     public class EggTimer
     {
+        public static void Wait(int milli)
+        {
+            Thread.Sleep(milli);
+        }
+
         public static void In(int milli, Action action)
         {
             Task.Run(() =>

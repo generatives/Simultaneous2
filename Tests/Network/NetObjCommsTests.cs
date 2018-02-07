@@ -11,9 +11,9 @@ namespace Tests.Network
     /// Summary description for ClusteringTests
     /// </summary>
     [TestClass]
-    public class ClusteringTests
+    public class NetObjCommsTests
     {
-        public ClusteringTests()
+        public NetObjCommsTests()
         {
             //
             // TODO: Add constructor logic here
@@ -61,42 +61,20 @@ namespace Tests.Network
         #endregion
 
         [TestMethod]
-        public void ThreeMemberClusterSetup()
+        public void TwoMemTwoObjEcho()
         {
-            var host = ObjectSpace.Start(10000);
-            EggTimer.Until(10, () => host.Update());
-            var firstClient = ObjectSpace.Join("localhost", 10000);
-            EggTimer.Until(3000, () =>
+            var members = Utils.StartLocalNetwork(10000, 2);
+
+            var mem0 = members[0];
+            var mem1 = members[1];
+
+            Utils.AddNetObj(mem0, (id, space) => new EchoNetObj(id, space), members);
+            Utils.AddNetObj(mem1, (id, space) => new GreetNetObj(id, space), members);
+
+            EggTimer.Until(5000, () =>
             {
-                host.Update();
-                firstClient.Update();
-                return firstClient.State == MemberState.JOINED;
+                members.ForEach(mem => mem.Update());
             });
-
-            Assert.AreEqual(MemberState.JOINED, firstClient.State);
-            Assert.AreEqual(2, host.SubSpaces.Count());
-            Assert.AreEqual(2, firstClient.SubSpaces.Count());
-            Assert.IsTrue(host.KnowsOfOnly(firstClient));
-            Assert.IsTrue(firstClient.KnowsOfOnly(host));
-
-            var secondClient = ObjectSpace.Join("localhost", 10000);
-            EggTimer.Until(3000, () =>
-            {
-                host.Update();
-                firstClient.Update();
-                secondClient.Update();
-                return secondClient.State == MemberState.JOINED && firstClient.SubSpaces.Count() == 3;
-            });
-
-            Assert.AreEqual(MemberState.JOINED, secondClient.State);
-
-            Assert.AreEqual(3, host.SubSpaces.Count());
-            Assert.AreEqual(3, secondClient.SubSpaces.Count());
-            Assert.AreEqual(3, firstClient.SubSpaces.Count());
-
-            Assert.IsTrue(host.KnowsOfOnly(firstClient, secondClient));
-            Assert.IsTrue(firstClient.KnowsOfOnly(host, secondClient));
-            Assert.IsTrue(secondClient.KnowsOfOnly(host, firstClient));
         }
     }
 }

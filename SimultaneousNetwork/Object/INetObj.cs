@@ -8,9 +8,10 @@ namespace SimultaneousNetwork.Object
     public interface INetObj
     {
         Guid Id { get; }
-        ISubSpace Member { get; }
+        ISubSpace SubSpace { get; }
 
-        object GetTrait(string name);
+        IReadOnlyDictionary<string, object> Traits { get; }
+        T GetTrait<T>(string name);
 
         void Tell(INetObj sender, object message);
     }

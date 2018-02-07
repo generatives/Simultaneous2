@@ -69,7 +69,7 @@ namespace Tests.Network
             var mem1 = members[1];
             var mem2 = members[2];
 
-            mem0.AddNetObj((id, space) => new TestNetObj(id, space));
+            mem0.AddNetObj((id, space) => new DummyNetObj(id, space));
 
             EggTimer.Until(100, () =>
             {
@@ -85,7 +85,7 @@ namespace Tests.Network
             Assert.AreEqual(1, mem1.NetObjs.Count());
             Assert.AreEqual(1, mem2.NetObjs.Count());
 
-            mem1.AddNetObj((id, space) => new TestNetObj(id, space));
+            mem1.AddNetObj((id, space) => new DummyNetObj(id, space));
 
             EggTimer.Until(100, () =>
             {
@@ -101,7 +101,7 @@ namespace Tests.Network
             Assert.AreEqual(2, mem1.NetObjs.Count());
             Assert.AreEqual(2, mem2.NetObjs.Count());
 
-            mem2.AddNetObj((id, space) => new TestNetObj(id, space));
+            mem2.AddNetObj((id, space) => new DummyNetObj(id, space));
 
             EggTimer.Until(100, () =>
             {

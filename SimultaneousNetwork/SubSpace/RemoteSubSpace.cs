@@ -15,14 +15,17 @@ namespace SimultaneousNetwork.SubSpace
         private RemoteMember _member;
         public Dictionary<Guid, NetObjProxy> _proxies;
 
+        public ObjectSpace Space { get; private set; }
+
         public Guid MemberId => _member.Id;
 
         public IEnumerable<INetObj> NetObjs => _proxies.Values;
 
         public INetObj this[Guid id] => _proxies[id];
 
-        public RemoteSubSpace(RemoteMember member)
+        public RemoteSubSpace(RemoteMember member, ObjectSpace space)
         {
+            Space = space;
             _proxies = new Dictionary<Guid, NetObjProxy>();
             _member = member;
         }
@@ -49,6 +52,20 @@ namespace SimultaneousNetwork.SubSpace
             else
             {
                 return false;
+            }
+        }
+
+        public INetObj RemoveObj(Guid id)
+        {
+            if (_proxies.ContainsKey(id))
+            {
+                var obj = _proxies[id];
+                _proxies.Remove(id);
+                return obj;
+            }
+            else
+            {
+                return null;
             }
         }
     }

@@ -9,6 +9,6 @@ namespace SimultaneousNetwork.Object.Proxy
     {
         public Guid Id;
         public Guid MemberId;
-        public Dictionary<string, object> Traits;
+        public IReadOnlyDictionary<string, object> Traits;
     }
 }

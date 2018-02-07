@@ -10,18 +10,18 @@ using System.Text;
 
 namespace SimultaneousNetwork
 {
-    public abstract class NetObj : INetObj
+    public class NetObj : INetObj
     {
         public Guid Id { get; private set; }
-        public ISubSpace Member { get; private set; }
+        public ISubSpace SubSpace { get; private set; }
 
         private Dictionary<string, object> _traits;
-        internal Dictionary<string, object> Traits => _traits;
+        public IReadOnlyDictionary<string, object> Traits => _traits;
 
-        public NetObj(Guid id, ISubSpace member)
+        public NetObj(Guid id, ISubSpace subSpace)
         {
             Id = id;
-            Member = member;
+            SubSpace = subSpace;
             _traits = new Dictionary<string, object>();
             DeclareTraits(_traits);
         }
@@ -31,19 +31,36 @@ namespace SimultaneousNetwork
             RecieveMessage(sender, message);
         }
 
-        public object GetTrait(string name)
+        public T GetTrait<T>(string name)
         {
             if (_traits.ContainsKey(name))
             {
-                return _traits[name];
+                return (T)_traits[name];
             }
             else
             {
-                return null;
+                return default(T);
             }
         }
 
-        public abstract void DeclareTraits(Dictionary<string, object> traits);
-        protected abstract void RecieveMessage(INetObj sender, object message);
+        public virtual void DeclareTraits(Dictionary<string, object> traits)
+        {
+
+        }
+
+        public virtual void Begin()
+        {
+
+        }
+
+        protected virtual void RecieveMessage(INetObj sender, object message)
+        {
+
+        }
+
+        public virtual void End()
+        {
+
+        }
     }
 }

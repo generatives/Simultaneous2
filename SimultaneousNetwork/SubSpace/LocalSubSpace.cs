@@ -11,20 +11,21 @@ using System.Text;
 
 namespace SimultaneousNetwork.SubSpace
 {
-    public class LocalSubSpace : ISubSpace
+    internal class LocalSubSpace : ISubSpace
     {
-        public Guid MemberId => _member.Id;
+        public Guid MemberId { get; internal set; }
 
         public IEnumerable<INetObj> NetObjs => _objects.Values;
 
-        public INetObj this[Guid id] => _objects[id];
+        public ObjectSpace Space { get; private set; }
 
-        private NetworkMember _member;
+        public INetObj this[Guid id] => _objects[id];
+        
         private Dictionary<Guid, NetObj> _objects;
 
-        public LocalSubSpace(NetworkMember member)
+        public LocalSubSpace(ObjectSpace space)
         {
-            _member = member;
+            Space = space;
             _objects = new Dictionary<Guid, NetObj>();
         }
 
@@ -36,13 +37,16 @@ namespace SimultaneousNetwork.SubSpace
         public void AddNetObj(NetObj obj)
         {
             _objects[obj.Id] = obj;
+            obj.Begin();
         }
 
         public bool RemoveNetObj(Guid id)
         {
             if(_objects.ContainsKey(id))
             {
+                var obj = _objects[id];
                 _objects.Remove(id);
+                obj.End();
                 return true;
             }
             else

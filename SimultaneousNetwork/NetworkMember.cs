@@ -21,51 +21,31 @@ namespace SimultaneousNetwork
     public class NetworkMember
     {
         public Guid Id { get; private set; }
-
-        public Dictionary<Guid, RemoteMember> RemoteMemberIds { get; private set; }
-        public LocalSubSpace LocalSpace { get; private set; }
-
-        private List<Query> _queries;
+        
         private Serializer _serializer;
 
         private EventBasedNetListener _listener;
         private NetManager _netManager;
 
+        private Dictionary<Guid, RemoteMember> _remoteMemberIds;
+        public IReadOnlyDictionary<Guid, RemoteMember> RemoteMemberIds => _remoteMemberIds;
+
+        private ObjectSpace _objSpace;
+
         public MemberState State { get; set; }
 
-        public IEnumerable<INetObj> NetObjs
+        public static NetworkMember Start(ObjectSpace space, int port, int maxMembers = 100, string connectionKey = "SimultaneousNetwork")
         {
-            get
-            {
-                foreach(var remote in RemoteMemberIds.Values)
-                {
-                    foreach(var obj in remote.Space.NetObjs)
-                    {
-                        yield return obj;
-                    }
-                }
-                if(LocalSpace != null)
-                {
-                    foreach (var obj in LocalSpace.NetObjs)
-                    {
-                        yield return obj;
-                    }
-                }
-            }
-        }
-
-        public static NetworkMember Start(int port, int maxMembers = 100, string connectionKey = "SimultaneousNetwork")
-        {
-            var pool = new NetworkMember(Guid.NewGuid(), maxMembers, connectionKey);
+            var pool = new NetworkMember(space, Guid.NewGuid(), maxMembers, connectionKey);
             pool.State = MemberState.SEEDING;
             pool._netManager.Start(port);
 
             return pool;
         }
 
-        public static NetworkMember Join(string seedAddress, int seedPort, int maxMembers = 100, string connectionKey = "SimultaneousNetwork")
+        public static NetworkMember Join(ObjectSpace space, string seedAddress, int seedPort, int maxMembers = 100, string connectionKey = "SimultaneousNetwork")
         {
-            var pool = new NetworkMember(maxMembers, connectionKey);
+            var pool = new NetworkMember(space, maxMembers, connectionKey);
             pool.State = MemberState.JOINING;
             pool._netManager.Start();
             pool._netManager.Connect(seedAddress, seedPort);
@@ -73,34 +53,65 @@ namespace SimultaneousNetwork
             return pool;
         }
 
-        private NetworkMember(Guid id, int maxMembers, string connectionString) : this(maxMembers, connectionString)
+        private NetworkMember(ObjectSpace space, Guid id, int maxMembers, string connectionString) : this(space, maxMembers, connectionString)
         {
-            _queries = new List<Query>();
             Id = id;
-            LocalSpace = new LocalSubSpace(this);
+            space.MemberIdAssigned(Id);
         }
 
-        private NetworkMember(int maxMembers, string connectionKey)
+        private NetworkMember(ObjectSpace space, int maxMembers, string connectionKey)
         {
-            _queries = new List<Query>();
+            _objSpace = space;
+
+            _remoteMemberIds = new Dictionary<Guid, RemoteMember>();
             _listener = new EventBasedNetListener();
             _netManager = new NetManager(_listener, maxMembers, connectionKey);
 
             _listener.PeerConnectedEvent += _listener_PeerConnectedEvent;
             _listener.NetworkReceiveEvent += _listener_NetworkReceiveEvent;
             
-            RemoteMemberIds = new Dictionary<Guid, RemoteMember>();
+            _remoteMemberIds = new Dictionary<Guid, RemoteMember>();
             Surrogate[] Surrogates =
             {
                 Surrogate.Create<INetObj, NetObjSurrogate>(
-                    obj => new NetObjSurrogate(obj.Id, obj.Member),
+                    obj => new NetObjSurrogate(obj.Id, obj.SubSpace),
                     objRef => objRef.Member[objRef.Id]),
                 Surrogate.Create<ISubSpace, NetMemberSurrogate>(
                     mem => new NetMemberSurrogate(mem.MemberId),
-                    objRef => (objRef.Id == LocalSpace.MemberId ? LocalSpace as ISubSpace : RemoteMemberIds[objRef.Id].Space))
+                    spaceRef => _objSpace.GetSubSpace(spaceRef.Id))
             };
             SerializerOptions options = new SerializerOptions(surrogates: Surrogates);
             _serializer = new Serializer(options);
+        }
+
+        internal void Update()
+        {
+            foreach (var member in _remoteMemberIds.Values)
+            {
+                member.Update();
+            }
+            _netManager.PollEvents();
+        }
+
+        internal void NetObjRemoved(INetObj obj)
+        {
+            TellRemotes(new ObjectRemoved()
+            {
+                Obj = obj
+            });
+        }
+
+        internal void NetObjAdded(INetObj obj)
+        {
+            TellRemotes(new ObjectAdded()
+            {
+                Description = new NetObjDescription()
+                {
+                    Id = obj.Id,
+                    Traits = obj.Traits,
+                    MemberId = Id
+                }
+            });
         }
 
         private void _listener_NetworkReceiveEvent(NetPeer peer, LiteNetLib.Utils.NetDataReader reader)
@@ -120,11 +131,10 @@ namespace SimultaneousNetwork
                                 var onBoarding = new OnBoarding()
                                 {
                                     AssignedId = id,
-                                    SeedId = LocalSpace.MemberId,
-                                    Members = RemoteMemberIds.Select(kvp => kvp.Value.GetRef()).ToArray()
+                                    SeedId = Id,
+                                    Members = _remoteMemberIds.Select(kvp => kvp.Value.GetRef()).ToArray()
                                 };
-                                var newRemote = new RemoteMember(id, peer, _serializer);
-                                RemoteMemberIds[id] = newRemote;
+                                var newRemote = AddRemoteMember(id, peer);
                                 newRemote.Tell(onBoarding);
                             }
                             break;
@@ -132,23 +142,21 @@ namespace SimultaneousNetwork
                             if (State == MemberState.JOINING)
                             {
                                 Id = onBoarding.AssignedId;
-                                LocalSpace = new LocalSubSpace(this);
+                                _objSpace.MemberIdAssigned(Id);
                                 var memJoined = new MemberJoined() { Id = onBoarding.AssignedId };
                                 foreach (var info in onBoarding.Members)
                                 {
                                     var newPeer = _netManager.Connect(info.Address, info.Port);
-                                    var member = new RemoteMember(info.Id, newPeer, _serializer);
-                                    RemoteMemberIds[info.Id] = member;
+                                    var member = AddRemoteMember(info.Id, newPeer);
                                     member.Tell(memJoined);
                                 }
-                                var hostMember = new RemoteMember(onBoarding.SeedId, peer, _serializer);
-                                RemoteMemberIds[onBoarding.SeedId] = hostMember;
+                                var hostMember = AddRemoteMember(onBoarding.SeedId, peer);
                                 State = MemberState.JOINED;
                                 hostMember.Tell(new FinishedOnBoarding());
                             }
                             break;
                         case MemberJoined memJoined:
-                            RemoteMemberIds[memJoined.Id] = new RemoteMember(memJoined.Id, peer, _serializer);
+                            AddRemoteMember(memJoined.Id, peer);
                             break;
                         case MemberMessage memMess:
                             memMess.Member.Tell(memMess.Message);
@@ -158,20 +166,11 @@ namespace SimultaneousNetwork
                             break;
                         case ObjectAdded objAdded:
                             var desc = objAdded.Description;
-                            var obj = RemoteMemberIds[desc.MemberId].Space.AddObj(desc);
-                            foreach(var query in _queries)
-                            {
-                                query.ObjAdded(obj);
-                            }
+                            _objSpace.RemoteNetObjAdded(desc);
                             break;
                         case ObjectRemoved objRemoved:
                             var remObj = objRemoved.Obj;
-                            var remote = RemoteMemberIds[remObj.Member.MemberId];
-                            remote.Space.RemoveObj(remObj);
-                            foreach (var query in _queries)
-                            {
-                                query.ObjRemoved(remObj);
-                            }
+                            _objSpace.RemoteNetObjRemoved(remObj.Id, remObj.SubSpace.MemberId);
                             break;
                     }
                 }
@@ -186,69 +185,9 @@ namespace SimultaneousNetwork
             }
         }
 
-        public void Update()
-        {
-            foreach(var member in RemoteMemberIds.Values)
-            {
-                member.Update();
-            }
-            _netManager.PollEvents();
-        }
-
-        public void AddNetObj(Func<Guid, ISubSpace, NetObj> factory)
-        {
-            var obj = factory(Guid.NewGuid(), LocalSpace);
-            LocalSpace.AddNetObj(obj);
-
-            TellRemotes(new ObjectAdded()
-            {
-                Description = new NetObjDescription()
-                {
-                    Id = obj.Id,
-                    Traits = obj.Traits,
-                    MemberId = Id
-                }
-            });
-
-            foreach (var query in _queries)
-            {
-                query.ObjAdded(obj);
-            }
-        }
-
-        public void RemoveNetObj(INetObj obj)
-        {
-            var removed = LocalSpace.RemoveNetObj(obj.Id);
-
-            if(removed)
-            {
-                TellRemotes(new ObjectRemoved()
-                {
-                    Obj = obj
-                });
-
-                foreach (var query in _queries)
-                {
-                    query.ObjRemoved(obj);
-                }
-            }
-        }
-
-        public Query AddQuery(Func<INetObj, bool> exp)
-        {
-            var query = new Query(exp);
-            _queries.Add(query);
-            return query;
-        }
-
-        public void RemoveQuery(Query query)
-        {
-            _queries.Remove(query);
-        }
-
         private void TellRemotes(object message)
         {
-            foreach (var remote in RemoteMemberIds.Values)
+            foreach (var remote in _remoteMemberIds.Values)
             {
                 remote.Tell(message);
             }
@@ -260,6 +199,15 @@ namespace SimultaneousNetwork
             {
                 return _serializer.Deserialize(stream);
             }
+        }
+
+        private RemoteMember AddRemoteMember(Guid id, NetPeer peer)
+        {
+            var member = new RemoteMember(id, peer, _serializer);
+            var space = new RemoteSubSpace(member, _objSpace);
+            _remoteMemberIds[id] = member;
+            _objSpace.RemoteSpaceAdded(space);
+            return member;
         }
     }
 }

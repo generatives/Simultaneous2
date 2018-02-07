@@ -17,15 +17,12 @@ namespace SimultaneousNetwork
         private NetPeer _peer;
         private Serializer _serializer;
 
-        public RemoteSubSpace Space { get; private set; }
-
         public RemoteMember(Guid id, NetPeer peer, Serializer serializer)
         {
             Id = id;
             _peer = peer;
             _serializer = serializer;
             _messages = new List<object>();
-            Space = new RemoteSubSpace(this);
         }
 
         public void Tell(object obj)
@@ -35,11 +32,11 @@ namespace SimultaneousNetwork
 
         public void Update()
         {
-            if(_messages.Count > 0)
+            foreach(var message in _messages)
             {
-                _peer.Send(_messages.ToArray(), _serializer);
-                _messages.Clear();
+                _peer.Send(new object[] { message }, _serializer);
             }
+            _messages.Clear();
         }
 
         public NetMemberRef GetRef()

@@ -12,31 +12,31 @@ namespace SimultaneousNetwork.Object.Proxy
     {
         public Guid Id { get; private set; }
 
-        public ISubSpace Member { get; private set; }
+        public ISubSpace SubSpace { get; private set; }
 
-        private Dictionary<string, object> _traits;
+        public IReadOnlyDictionary<string, object> Traits { get; private set; }
 
         public NetObjProxy(NetObjDescription desc, ISubSpace space)
         {
             Id = desc.Id;
-            Member = space;
-            _traits = desc.Traits;
+            SubSpace = space;
+            Traits = desc.Traits;
         }
 
         public void Tell(INetObj sender, object message)
         {
-            Member.Tell(new ObjectMessage() { Object = this, Sender = sender, Message = message });
+            SubSpace.Tell(new ObjectMessage() { Object = this, Sender = sender, Message = message });
         }
 
-        public object GetTrait(string name)
+        public T GetTrait<T>(string name)
         {
-            if (_traits.ContainsKey(name))
+            if (Traits.ContainsKey(name))
             {
-                return _traits[name];
+                return (T)Traits[name];
             }
             else
             {
-                return null;
+                return default(T);
             }
         }
     }

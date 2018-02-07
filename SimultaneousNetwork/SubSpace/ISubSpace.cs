@@ -7,6 +7,7 @@ namespace SimultaneousNetwork.SubSpace
 {
     public interface ISubSpace
     {
+        ObjectSpace Space { get; }
         Guid MemberId { get; }
         void Tell(object obj);
         INetObj this[Guid id] { get; }
