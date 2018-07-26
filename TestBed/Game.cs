@@ -23,14 +23,17 @@ namespace TestBed
 
         SpriteBatch spriteBatch;
 
-        LiteNetLibNetwork _clientNet;
-        SimultaneousSim _clientSim;
-        PlayerEntity _clientPlayer;
-
+        LiteNetLibNetwork _controllerNet;
+        SimultaneousSim _controllerSim;
+        PlayerEntity _controllerPlayer;
 
         LiteNetLibNetwork _authorityNet;
         SimultaneousSim _authoritySim;
         PlayerEntity _authorityPlayer;
+
+        LiteNetLibNetwork _observerNet;
+        SimultaneousSim _observerSim;
+        PlayerEntity _observerPlayer;
 
         public KeyboardDevice Keyboard;
 
@@ -44,9 +47,13 @@ namespace TestBed
             _authoritySim.ListenToPort(5555);
             _authoritySim.ClientSimConnected += _authoritySim_ClientSimConnected;
 
-            _clientNet = new LiteNetLibNetwork(CreateSerializer());
-            _clientSim = new SimultaneousSim(this, _clientNet);
-            _clientSim.ConnectToHost("localhost", 5555);
+            _controllerNet = new LiteNetLibNetwork(CreateSerializer());
+            _controllerSim = new SimultaneousSim(this, _controllerNet);
+            _controllerSim.ConnectToHost("localhost", 5555);
+
+            _observerNet = new LiteNetLibNetwork(CreateSerializer());
+            _observerSim = new SimultaneousSim(this, _observerNet);
+            _observerSim.ConnectToHost("localhost", 5555);
         }
 
         private Serializer CreateSerializer()
@@ -59,11 +66,15 @@ namespace TestBed
                 null,
                 false));
         }
-
+        int simsJoined = 0;
         private void _authoritySim_ClientSimConnected(RemoteSim obj)
         {
-            _authorityPlayer = new PlayerEntity(this);
-            _authoritySim.NewEntity(_authorityPlayer, _clientSim.Id, 50);
+            simsJoined++;
+            if(simsJoined == 2)
+            {
+                _authorityPlayer = new PlayerEntity(this);
+                _authoritySim.NewEntity(_authorityPlayer, _controllerSim.Id, 50);
+            }
         }
 
         protected override UltravioletContext OnCreatingUltravioletContext()
@@ -99,8 +110,9 @@ namespace TestBed
             _lastFrameTime = _frameWatch.Elapsed.TotalMilliseconds;
             _frameWatch.Restart();
 
-            _clientSim.Update();
+            _controllerSim.Update();
             _authoritySim.Update();
+            _observerSim.Update();
 
             base.OnUpdating(time);
         }
@@ -110,14 +122,18 @@ namespace TestBed
             Ultraviolet.GetGraphics().Clear(Color.CornflowerBlue);
 
             spriteBatch.Begin();
-            if (_clientPlayer != null)
+            if (_controllerPlayer != null)
             {
-                spriteBatch.DrawCircle(_clientPlayer.Position, 10, 9, Color.Red);
+                spriteBatch.DrawCircle(_controllerPlayer.Position, 10, 9, Color.Red);
             }
-            //if (_authorityPlayer != null)
-            //{
-            //    spriteBatch.DrawCircle(_authorityPlayer.Position, 10, 9, Color.Purple);
-            //}
+            if (_authorityPlayer != null)
+            {
+                spriteBatch.DrawCircle(_authorityPlayer.Position, 10, 9, Color.Purple);
+            }
+            if (_observerPlayer != null)
+            {
+                spriteBatch.DrawCircle(_observerPlayer.Position, 10, 9, Color.Yellow);
+            }
             spriteBatch.End();
 
             base.OnDrawing(time);
@@ -139,11 +155,18 @@ namespace TestBed
             return _lastFrameTime;
         }
 
-        public IEntityLogic CreateEntity(object info)
+        public IEntityLogic CreateEntity(SimultaneousSim sim, object info)
         {
-            if (_clientPlayer != null) throw new Exception("Whaaaaat");
-            _clientPlayer = new PlayerEntity(this);
-            return _clientPlayer;
+            var entity = new PlayerEntity(this);
+            if(sim == _observerSim)
+            {
+                _observerPlayer = entity;
+            }
+            else if(sim == _controllerSim)
+            {
+                _controllerPlayer = entity;
+            }
+            return entity;
         }
     }
 

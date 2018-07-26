@@ -62,7 +62,7 @@ namespace Simultaneous2Core.Entity
                     _logic.ApplySnapshot(_lastValidSnapshot);
                 }
                 //Console.WriteLine($"State Before Delta: {_logic.TakeSnapshot()}");
-                Console.WriteLine($"Applying Delta: {deltaEnv.Deltas} From: {deltaEnv.SentTimestamp} It Is: {_sim.GetTimestamp()}");
+                //Console.WriteLine($"Applying Delta: {deltaEnv.Deltas} From: {deltaEnv.SentTimestamp} It Is: {_sim.GetTimestamp()}");
                 _logic.ApplyDeltas(deltaEnv.Deltas);
 
                 _lastValidSnapshot = _logic.TakeSnapshot();
@@ -141,7 +141,7 @@ namespace Simultaneous2Core.Entity
                     {
                         client.SendDeltaEnvelope(env);
                     }
-                    _controllerEntity.SendDeltaEnvelope(env);
+                    _controllerEntity?.SendDeltaEnvelope(env);
                 }
             }
         }

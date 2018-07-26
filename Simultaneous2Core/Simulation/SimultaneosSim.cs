@@ -178,7 +178,7 @@ namespace Simultaneous2Core.Simulation
 
         private void ProcessEntityAdded(EntityAdded added)
         {
-            var logic = _interface.CreateEntity(added.CreationInfo);
+            var logic = _interface.CreateEntity(this, added.CreationInfo);
             var entity = CreateLocalEntity(logic, added);
             AddRemoteEntites(entity, added);
         }
