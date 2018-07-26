@@ -1,4 +1,4 @@
-﻿Simultaneous2
+Simultaneous2
 
 In development, not at all ready for use.
 
