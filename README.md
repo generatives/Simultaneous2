@@ -1,6 +1,6 @@
-Simultaneous2
+# Simultaneous2
 
-In development, not at all ready for use.
+## In development, not at all ready for use.
 
 A state syncronization library for C# built with LiteNetLib and Hyperion.
 
