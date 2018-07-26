@@ -70,8 +70,13 @@ namespace Simultaneous2Core.Entity
                 _recordedFrames = _recordedFrames
                     .Where(e => e.SentTimestamp > deltaEnv.SentTimestamp)
                     .ToList();
+                var processCommands = Role.IsInRole(EntityRole.CONTROLLER);
                 foreach (var env in _recordedFrames)
                 {
+                    if(processCommands)
+                    {
+                        _logic.ProcessCommands(env.Commands);
+                    }
                     _logic.Simulate(env.SentDelta);
                 }
 
@@ -98,20 +103,23 @@ namespace Simultaneous2Core.Entity
         public void Update()
         {
             var delta = _sim.GetDeltaTime();
+            var currentFrame = new FrameRecord()
+            {
+                Commands = new List<object>(),
+                SentDelta = delta,
+                SentTimestamp = _sim.GetTimestamp()
+            };
+
+            _recordedFrames.Add(currentFrame);
 
             if (Role.IsInRole(EntityRole.CONTROLLER))
             {
-                var currentFrame = new FrameRecord()
-                {
-                    Commands = new List<object>(),
-                    SentDelta = delta,
-                    SentTimestamp = _sim.GetTimestamp()
-                };
-
                 var commands = _logic.GenerateCommands();
                 currentFrame.Commands.Add(commands);
-
-                _recordedFrames.Add(currentFrame);
+                if(!Role.IsInRole(EntityRole.AUTHORITY))
+                {
+                    _logic.ProcessCommands(currentFrame.Commands);
+                }
 
                 _authorityEntity.SendFrameRecord(currentFrame);
             }

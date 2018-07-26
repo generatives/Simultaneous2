@@ -43,8 +43,8 @@ namespace SimultaneousLiteNetLib
             _listener = new EventBasedNetListener();
             _netManager = new NetManager(_listener);
             _netManager.SimulateLatency = true;
-            _netManager.SimulationMinLatency = 2;
-            _netManager.SimulationMaxLatency = 10;
+            _netManager.SimulationMinLatency = 20;
+            _netManager.SimulationMaxLatency = 30;
 
             _listener.PeerConnectedEvent += _listener_PeerConnectedEvent;
             _listener.PeerDisconnectedEvent += _listener_PeerDisconnectedEvent;

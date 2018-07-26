@@ -23,14 +23,17 @@ namespace TestBed
 
         SpriteBatch spriteBatch;
 
+        bool _renderController = true;
         LiteNetLibNetwork _controllerNet;
         SimultaneousSim _controllerSim;
         PlayerEntity _controllerPlayer;
 
+        bool _renderAuthority = true;
         LiteNetLibNetwork _authorityNet;
         SimultaneousSim _authoritySim;
         PlayerEntity _authorityPlayer;
 
+        bool _renderObserver = true;
         LiteNetLibNetwork _observerNet;
         SimultaneousSim _observerSim;
         PlayerEntity _observerPlayer;
@@ -99,10 +102,28 @@ namespace TestBed
             this.content = ContentManager.Create("Content");
             spriteBatch = SpriteBatch.Create();
             Keyboard = Ultraviolet.GetInput().GetKeyboard();
+            Keyboard.ButtonReleased += Keyboard_ButtonReleased;
 
             // TODO: Load content here
 
             base.OnLoadingContent();
+        }
+
+        private void Keyboard_ButtonReleased(Ultraviolet.Platform.IUltravioletWindow window, KeyboardDevice device, Scancode scancode)
+        {
+            if(scancode == Scancode.O)
+            {
+                _renderObserver = !_renderObserver;
+            }
+            if(scancode == Scancode.C)
+            {
+                _renderController = !_renderController;
+            }
+            if(scancode == Scancode.H)
+            {
+                _renderAuthority = !_renderAuthority;
+            }
+
         }
 
         protected override void OnUpdating(UltravioletTime time)
@@ -122,15 +143,15 @@ namespace TestBed
             Ultraviolet.GetGraphics().Clear(Color.CornflowerBlue);
 
             spriteBatch.Begin();
-            if (_controllerPlayer != null)
+            if (_renderController && _controllerPlayer != null)
             {
                 spriteBatch.DrawCircle(_controllerPlayer.Position, 10, 9, Color.Red);
             }
-            if (_authorityPlayer != null)
+            if (_renderAuthority && _authorityPlayer != null)
             {
                 spriteBatch.DrawCircle(_authorityPlayer.Position, 10, 9, Color.Purple);
             }
-            if (_observerPlayer != null)
+            if (_renderObserver && _observerPlayer != null)
             {
                 spriteBatch.DrawCircle(_observerPlayer.Position, 10, 9, Color.Yellow);
             }
