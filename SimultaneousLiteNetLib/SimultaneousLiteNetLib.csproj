@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hyperion" Version="0.9.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\Libs\LiteNetLib\LiteNetLibStandard\LiteNetLibStandard.csproj" />
+    <ProjectReference Include="..\Simultaneous2Core\Simultaneous2Core.csproj" />
+  </ItemGroup>
+
+</Project>
