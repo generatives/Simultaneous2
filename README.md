@@ -2,7 +2,7 @@
 
 ## In development, not at all ready for use.
 
-A state syncronization library for C# built with LiteNetLib and Hyperion.
+A state synchronization library for C# built with LiteNetLib and Hyperion.
 
 Each computer has a "Simulation". Each Simulation contains a set of "Entities". Entities contain the game state.
 
