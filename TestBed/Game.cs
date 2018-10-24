@@ -31,7 +31,7 @@ namespace TestBed
         bool _renderAuthority = true;
         LiteNetLibNetwork _authorityNet;
         SimultaneousSim _authoritySim;
-        PlayerEntity _authorityPlayer;
+        public PlayerEntity _authorityPlayer;
 
         bool _renderObserver = true;
         LiteNetLibNetwork _observerNet;
@@ -119,7 +119,7 @@ namespace TestBed
             {
                 _renderController = !_renderController;
             }
-            if(scancode == Scancode.H)
+            if(scancode == Scancode.A)
             {
                 _renderAuthority = !_renderAuthority;
             }
@@ -134,6 +134,16 @@ namespace TestBed
             _controllerSim.Update();
             _authoritySim.Update();
             _observerSim.Update();
+
+            //if (_controllerPlayer != null)
+            //{
+            //    Console.WriteLine($"C- D: {_lastFrameTime}; S: {_controllerSim.GetTimestamp()}; P: X: {_controllerPlayer.Position.X}, Y: {_controllerPlayer.Position.Y}");
+            //}
+
+            //if (_authorityPlayer != null)
+            //{
+            //    Console.WriteLine($"A- D: {_lastFrameTime}; S: {_authoritySim.GetTimestamp()}; P: X: {_authorityPlayer.Position.X}, Y: {_authorityPlayer.Position.Y}");
+            //}
 
             base.OnUpdating(time);
         }
@@ -185,6 +195,7 @@ namespace TestBed
             }
             else if(sim == _controllerSim)
             {
+                //entity.LogState = true;
                 _controllerPlayer = entity;
             }
             return entity;
@@ -195,7 +206,8 @@ namespace TestBed
     {
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
-        public LocalEntity Entity { get; set; }
+        public float Speed { get; set; } = 5;
+        public bool LogState { get; set; }
 
         private Game _game;
 
@@ -220,14 +232,17 @@ namespace TestBed
 
         public object GenerateCommands()
         {
-            //Console.WriteLine($"X: {Position.X}, Y: {Position.Y}");
+            if(LogState)
+            {
+                Console.WriteLine($"X: {Position.X}, Y: {Position.Y}");
+            }
             var keyboard = _game.Keyboard;
             return new PlayerCommand()
             {
-                Left = keyboard.IsButtonDown(Scancode.A),
-                Right = keyboard.IsButtonDown(Scancode.D),
-                Up = keyboard.IsButtonDown(Scancode.W),
-                Down = keyboard.IsButtonDown(Scancode.S)
+                Left = keyboard.IsButtonDown(Scancode.Left),
+                Right = keyboard.IsButtonDown(Scancode.Right),
+                Up = keyboard.IsButtonDown(Scancode.Up),
+                Down = keyboard.IsButtonDown(Scancode.Down)
             };
             //return new PlayerCommand()
             //{
@@ -266,19 +281,24 @@ namespace TestBed
                     {
                         vel += new Vector2(0, 1);
                     }
-                    Velocity = vel;
+                    Velocity = vel * Speed;
                 }
             }
         }
 
-        public void Simulate(float delta)
+        public void Simulate(float deltaTime)
         {
-            Position += Velocity * (delta / 1000) * 50;
+            //if (_game._authorityPlayer == this)
+            //{
+            //    Console.WriteLine("Simulating Authority");
+            //}
+            //Position += Velocity * (deltaTime / 1000) * 50;
+            Position += Velocity;
         }
 
-        public object TakeDeltas()
+        public object CalculateDeltas(object oldSnapshot, object newSnapshot)
         {
-            return new PlayerState() { Position = Position, Velocity = Velocity };
+            return newSnapshot;
         }
 
         public object TakeSnapshot()
@@ -300,6 +320,11 @@ namespace TestBed
         public class PlayerCommand
         {
             public bool Left, Right, Up, Down;
+
+            public override string ToString()
+            {
+                return $"Left: {Left}, Right: {Right}, Up: {Up}, Down: {Down}";
+            }
         }
     }
 }

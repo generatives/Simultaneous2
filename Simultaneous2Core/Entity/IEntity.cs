@@ -7,7 +7,7 @@ namespace Simultaneous2Core.Entity
     {
         Guid Id { get; }
         EntityRole Role { get; }
-        void SendFrameRecord(FrameRecord envelope);
+        void SendFrameRecord(FrameCommands envelope);
         void SendDeltaEnvelope(DeltaEnvelope deltaEnv);
     }
 

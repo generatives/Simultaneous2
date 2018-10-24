@@ -25,9 +25,9 @@ namespace Simultaneous2Core.Entity
             _sim.SendMessage(new EntityMessage<DeltaEnvelope>(Id, deltaEnv));
         }
 
-        public void SendFrameRecord(FrameRecord envelope)
+        public void SendFrameRecord(FrameCommands envelope)
         {
-            _sim.SendMessage(new EntityMessage<FrameRecord>(Id, envelope));
+            _sim.SendMessage(new EntityMessage<FrameCommands>(Id, envelope));
         }
     }
 }

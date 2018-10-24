@@ -3,6 +3,7 @@ using Simultaneous2Core.Message;
 using Simultaneous2Core.Networking;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Simultaneous2Core.Simulation
@@ -28,7 +29,9 @@ namespace Simultaneous2Core.Simulation
         private List<EntityAdded> _addedEntites;
         private List<EntityRemoved> _removedEntities;
 
-        private double _currentTimeStamp;
+        private long _currentTimeStamp;
+
+        private SortedList<long, List<EntityMessage<FrameCommands>>> _recievedFrameRecords;
 
         public SimultaneousSim(ISimultaneousInterface @interface, INetwork network)
         {
@@ -42,6 +45,7 @@ namespace Simultaneous2Core.Simulation
             _network.PeerDisconnected += _network_PeerDisconnected;
             _network.MessageRecieved += _network_MessageRecieved;
             _network.SimulationIdAssigned += _network_SimulationIdAssigned;
+            _recievedFrameRecords = new SortedList<long, List<EntityMessage<FrameCommands>>>();
         }
 
         private void _network_SimulationIdAssigned(Guid id)
@@ -68,12 +72,12 @@ namespace Simultaneous2Core.Simulation
                             entity.RecieveDeltas(delta.Message);
                         }
                         break;
-                    case EntityMessage<FrameRecord> cmd:
-                        if (_entities.ContainsKey(cmd.EntityId))
+                    case EntityMessage<FrameCommands> cmd:
+                        if(!_recievedFrameRecords.ContainsKey(cmd.Message.SentTimestamp))
                         {
-                            var entity = _entities[cmd.EntityId];
-                            entity.RecieveEnvelope(cmd.Message);
+                            _recievedFrameRecords.Add(cmd.Message.SentTimestamp, new List<EntityMessage<FrameCommands>>());
                         }
+                        _recievedFrameRecords[cmd.Message.SentTimestamp].Add(cmd);
                         break;
                 }
             }
@@ -218,11 +222,50 @@ namespace Simultaneous2Core.Simulation
 
         public void Update()
         {
-            _currentTimeStamp += _interface.GetDeltaTime();
+            var lastFrameStamp = GetTimestamp();
+            _currentTimeStamp += 1;
 
             _network.Update();
 
-            foreach(var entity in _entities.Values)
+            if(_recievedFrameRecords.Any())
+            {
+                long previousTimestamp = 0;
+                var isFirst = true;
+                foreach(var kvp in _recievedFrameRecords)
+                {
+                    foreach (var entity in _entities.Values)
+                    {
+                        if (isFirst)
+                        {
+                            entity.GoToTimestamp(kvp.Key);
+                            isFirst = false;
+                        }
+                        else
+                        {
+                            entity.SimulateTimespan(previousTimestamp, kvp.Key, 16);
+                        }
+                    }
+
+                    var cmds = kvp.Value;
+                    foreach(var cmd in cmds)
+                    {
+                        if (_entities.ContainsKey(cmd.EntityId))
+                        {
+                            var entity = _entities[cmd.EntityId];
+                            entity.RecieveEnvelope(cmd.Message);
+                        }
+                    }
+                    previousTimestamp = kvp.Key + 1;
+                }
+                foreach (var entity in _entities.Values)
+                {
+                    entity.SimulateTimespan(previousTimestamp, GetTimestamp(), 16.6f);
+                }
+
+                _recievedFrameRecords.Clear();
+            }
+
+            foreach (var entity in _entities.Values)
             {
                 entity.Update();
             }
@@ -246,7 +289,7 @@ namespace Simultaneous2Core.Simulation
 
         public long GetTimestamp()
         {
-            return (long)_currentTimeStamp;
+            return _currentTimeStamp;
         }
     }
 }

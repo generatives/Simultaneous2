@@ -6,14 +6,17 @@ namespace Simultaneous2Core.Entity
 {
     public interface IEntityLogic
     {
+        void Simulate(float deltaTime);
+
         object GenerateCommands();
         void ProcessCommands(IEnumerable<object> commands);
-        void Simulate(float delta);
 
+        object CalculateDeltas(object oldSnapshot, object newSnapshot);
         void ApplyDeltas(object deltas);
-        object TakeDeltas();
-        void ApplySnapshot(object snapshot);
+
         object TakeSnapshot();
+        void ApplySnapshot(object snapshot);
+
         object GetCreationInfo();
     }
 }
